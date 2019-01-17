@@ -1,4 +1,5 @@
-# whmcs-provisioning-modue
+
+# WHMCS Provisioning Module
 WHMCS Provisioning module to enable the following actions in WHMCS
 
 - Create hosting product (WordPress or Linux)
@@ -17,5 +18,18 @@ WHMCS Provisioning module to enable the following actions in WHMCS
 5. For the nameservers put ns1.hyper.host, ns2.hyper.host, ns3.hyper.host ns4.hyper.host
 6. For the type, select Hyper Host
 7. For the password, enter your API key generated at https://hyper.host/settings > Security/API Access
+8. Save changes!
 
 ## All other fields can be left blank 
+
+## Adding your products
+
+1. Go to Setup > Products/Services > Products/Services
+2. Add a new group called 'Cloud Hosting' (or whatever you want)
+3. Add a new product
+4. For Product Type slect Hosting Account
+5. For Product Group use the one you created
+6. For name call it WordPress or Linux
+7. Under Module Settings, Select Hyper Host as the Module Name
+8. Select the platform (WordPress or Linux)
+9. Set the products auto provisioning option and save!
