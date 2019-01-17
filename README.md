@@ -32,4 +32,9 @@ WHMCS Provisioning module to enable the following actions in WHMCS
 6. For name call it WordPress or Linux
 7. Under Module Settings, Select Hyper Host as the Module Name
 8. Select the platform (WordPress or Linux)
-9. Set the products auto provisioning option and save!
+9. Set the products auto provisioning option to "Automatically setup the product when you manually accept a pending order"
+10. Save changes!
+
+## Setting up your customers
+
+At the moment the module does not automate customer creation so you just need to set the automated provisioning to "Automatically setup the product when you manually accept a pending order" as described above, then create the customer at https://hyper.host and add there hyper_host_id as a custom field (under Setup > Custom Client Fields) you need to call the custom field hyper_host_id
