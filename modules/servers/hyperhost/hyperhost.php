@@ -1,9 +1,11 @@
 <?php
 
 /**
- * Hyper Host Provisioning Module v1
+ * Hyper Host Provisioning Module v1.1
  * Developed by Tony James - me@tony.codes
  */
+
+use WHMCS\Database\Capsule;
 
 if (!defined("WHMCS")) {
     die("This file cannot be accessed directly");
@@ -52,6 +54,72 @@ function hyperhost_ConfigOptions()
  */
 function hyperhost_CreateAccount(array $params)
 {
+
+    if(empty($params['clientsdetails']['customfields1'])) {
+
+        try {
+
+            $curl = curl_init();
+
+            $post = [
+                'name' => $params['clientsdetails']['firstname'] . ' ' . $params['clientsdetails']['lastname'],
+                'email' => $params['clientsdetails']['email'],
+                'plan_unique_id' => 'whmcs', // Your whmcs plan defined at Hyper Host, needs to be named whmcs
+                'status' => 'active', // Activate this user
+            ];
+
+            curl_setopt_array($curl, array(
+                CURLOPT_URL => "https://hyper.host/api/v1/suser?api_token=" . $params['serverpassword'],
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_ENCODING => "",
+                CURLOPT_MAXREDIRS => 10,
+                CURLOPT_TIMEOUT => 0,
+                CURLOPT_FOLLOWLOCATION => false,
+                CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
+                CURLOPT_CUSTOMREQUEST => "POST",
+                CURLOPT_POSTFIELDS => $post,
+            ));
+
+            $response = curl_exec($curl);
+            curl_error($curl);
+
+            $responseCode = curl_getinfo($curl)['http_code'];
+
+            if ($responseCode !== 200) {
+
+                return 'Customer missing hyper_host_id and wasnt able to get one: ' . $responseCode;
+
+            } else {
+
+                Capsule::table('tblcustomfieldsvalues')
+                    ->where('fieldid', 1)
+                    ->where('relid', $params['clientsdetails']['id'])
+                    ->update([
+                        'value' => $response,
+                    ]);
+
+                $params['clientsdetails']['customfields1'] = $response;
+
+            }
+
+            curl_close($curl);
+
+        } catch (Exception $e) {
+
+            // Record the error in WHMCS's module log.
+            logModuleCall(
+                'provisioningmodule',
+                __FUNCTION__,
+                $params,
+                $e->getMessage(),
+                $e->getTraceAsString()
+            );
+
+            return $e->getMessage();
+
+        }
+
+    }
 
     try {
 
@@ -120,7 +188,7 @@ function hyperhost_TestConnection(array $params)
         $curl = curl_init();
 
         curl_setopt_array($curl, array(
-            CURLOPT_URL => "https://hyper.host/api/v1/suser/" . $params['clientsdetails']['customfields1'] . "/package?api_token=" . $params['serverpassword'],
+            CURLOPT_URL => "https://hyper.host/api/v1/package?api_token=" . $params['serverpassword'],
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_ENCODING => "",
             CURLOPT_MAXREDIRS => 10,
