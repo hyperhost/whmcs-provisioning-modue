@@ -10,7 +10,7 @@ WHMCS Provisioning module to enable the following actions in WHMCS
 - Unsuspend packages
 - Single sign on to package control panels for admin and customers
 
-## Installation
+### Installation
 
 01. Drop the hyperhost server module folder into your modules > servers 
 02. In WHMCS admin go to Setup > Products/Services > Servers
@@ -23,7 +23,7 @@ WHMCS Provisioning module to enable the following actions in WHMCS
 
 ##### Note: All other fields can be left blank
 
-## Adding your products
+### Adding your products
 
 01. Go to Setup > Products/Services > Products/Services
 02. Add a new group called 'Cloud Hosting' (or whatever you want)
@@ -36,6 +36,6 @@ WHMCS Provisioning module to enable the following actions in WHMCS
 09. Set the products auto provisioning option to whatever you prefer
 10. Save changes!
 
-## Setting up your customers
+### Setting up your customers
 
 Before taking orders you will need to create a custom client field called hyper_host_id. You can do this under Setup > Custom Client Fields. Make sure you name the field hyper_host_id
