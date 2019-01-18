@@ -39,3 +39,7 @@ WHMCS Provisioning module to enable the following actions in WHMCS
 ### Setting up your customers
 
 Before taking orders you will need to create a custom client field called hyper_host_id. You can do this under Setup > Custom Client Fields. Make sure you name the field hyper_host_id
+
+### Setting up your hosting plans
+
+At the moment the module only supports a single plan, and the name of the plan needs to be whmcs (lowercase) please add this plan before trying to take orders as it enables the auto creation of customers.
