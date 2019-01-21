@@ -5,6 +5,7 @@
  * Developed by Tony James - me@tony.codes
  */
 
+use GuzzleHttp\Client;
 use WHMCS\Database\Capsule;
 
 if (!defined("WHMCS")) {
@@ -41,6 +42,7 @@ function hyperhost_ConfigOptions()
             "Options" => [
                 '905' => 'Linux',
                 '907' => 'WordPress',
+                '15809' => 'Windows',
             ],
             "Description" => "Select Linux if unsure, use WordPress only for WordPress sites",
             "Default" => "905",
@@ -50,63 +52,66 @@ function hyperhost_ConfigOptions()
 }
 
 /**
- * Provision a new instance of a product/service.
+ * Get or create the custom hyper_host_id.
+ *
+ * @param array $params
+ *
+ * @return string
  */
-function hyperhost_CreateAccount(array $params)
+function hyper_host_id(array $params)
 {
 
-    if(empty($params['clientsdetails']['customfields1'])) {
+    /**
+     * Attempt to find the custom client field
+     */
+    $hyper_host_field = Capsule::table('tblcustomfields')
+        ->where('fieldname', 'hyper_host_id')
+        ->first();
+
+    /**
+     * If it cannot be found, return friendly error
+     */
+    if (!$hyper_host_field->id || empty($hyper_host_field->id)) {
+
+        return 'Failed to create hyper_host_id, have you added your custom client field?';
+
+    }
+
+    /**
+     * If found, check if it has a value set for this Customer
+     */
+    if ($params['clientsdetails']['customfields' . $hyper_host_field->id]) {
+
+        return $params['clientsdetails']['customfields' . $hyper_host_field->id];
+
+        /**
+         * If not set try and populate the value
+         */
+    } else {
 
         try {
 
-            $curl = curl_init();
-
-            $post = [
+            $payload = [
                 'name' => $params['clientsdetails']['firstname'] . ' ' . $params['clientsdetails']['lastname'],
                 'email' => $params['clientsdetails']['email'],
                 'plan_unique_id' => 'whmcs', // Your whmcs plan defined at Hyper Host, needs to be named whmcs
                 'status' => 'active', // Activate this user
             ];
 
-            curl_setopt_array($curl, array(
-                CURLOPT_URL => "https://hyper.host/api/v1/suser?api_token=" . $params['serverpassword'],
-                CURLOPT_RETURNTRANSFER => true,
-                CURLOPT_ENCODING => "",
-                CURLOPT_MAXREDIRS => 10,
-                CURLOPT_TIMEOUT => 0,
-                CURLOPT_FOLLOWLOCATION => false,
-                CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
-                CURLOPT_CUSTOMREQUEST => "POST",
-                CURLOPT_POSTFIELDS => $post,
-            ));
+            $hyperClient = hyperhost_Client($params['serverpassword']);
+            $response    = $hyperClient->post('suser', ['json' => $payload])->getBody()->getContents();
 
-            $response = curl_exec($curl);
-            curl_error($curl);
+            Capsule::table('tblcustomfieldsvalues')
+                ->where('fieldid', $hyper_host_field->id)
+                ->where('relid', $params['clientsdetails']['id'])
+                ->update([
+                    'value' => $response,
+                ]);
 
-            $responseCode = curl_getinfo($curl)['http_code'];
+            return $response;
 
-            if ($responseCode !== 200) {
+        } catch (Throwable $e) {
 
-                return 'Customer missing hyper_host_id and wasnt able to get one: ' . $responseCode;
-
-            } else {
-
-                Capsule::table('tblcustomfieldsvalues')
-                    ->where('fieldid', 1)
-                    ->where('relid', $params['clientsdetails']['id'])
-                    ->update([
-                        'value' => $response,
-                    ]);
-
-                $params['clientsdetails']['customfields1'] = $response;
-
-            }
-
-            curl_close($curl);
-
-        } catch (Exception $e) {
-
-            // Record the error in WHMCS's module log.
             logModuleCall(
                 'provisioningmodule',
                 __FUNCTION__,
@@ -121,48 +126,31 @@ function hyperhost_CreateAccount(array $params)
 
     }
 
+}
+
+/**
+ * Provision a new instance of a product/service.
+ */
+function hyperhost_CreateAccount(array $params)
+{
+
     try {
 
-        $curl = curl_init();
+        $hyperHostId = hyper_host_id($params);
 
-        $post = [
+        $payload = [
             'platform' => $params['configoption1'],
             'domain' => $params['domain'],
-            'hyper_host_id' => $params['clientsdetails']['customfields1'],
+            'hyper_host_id' => $hyperHostId,
         ];
 
-        curl_setopt_array($curl, array(
-            CURLOPT_URL => "https://hyper.host/api/v1/suser/" . $params['clientsdetails']['customfields1'] . "/package?api_token=" . $params['serverpassword'],
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_ENCODING => "",
-            CURLOPT_MAXREDIRS => 10,
-            CURLOPT_TIMEOUT => 0,
-            CURLOPT_FOLLOWLOCATION => false,
-            CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
-            CURLOPT_CUSTOMREQUEST => "POST",
-            CURLOPT_POSTFIELDS => $post,
-        ));
+        $hyperClient = hyperhost_Client($params['serverpassword']);
+        $hyperClient->post('suser/' . $hyperHostId . '/package', ['json' => $payload])->getBody()->getContents();
 
-        curl_exec($curl);
-        curl_error($curl);
+        return 'success';
 
-        $responseCode = curl_getinfo($curl)['http_code'];
+    } catch (Throwable $e) {
 
-        if ($responseCode !== 200) {
-
-            return 'Request failed with error code: ' . $responseCode;
-
-        } else {
-
-            return 'success';
-
-        }
-
-        curl_close($curl);
-
-    } catch (Exception $e) {
-
-        // Record the error in WHMCS's module log.
         logModuleCall(
             'provisioningmodule',
             __FUNCTION__,
@@ -185,38 +173,12 @@ function hyperhost_TestConnection(array $params)
 
     try {
 
-        $curl = curl_init();
+        $hyperClient = hyperhost_Client($params['serverpassword']);
+        $hyperClient->get('package')->getBody()->getContents();
+        $success = true;
 
-        curl_setopt_array($curl, array(
-            CURLOPT_URL => "https://hyper.host/api/v1/package?api_token=" . $params['serverpassword'],
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_ENCODING => "",
-            CURLOPT_MAXREDIRS => 10,
-            CURLOPT_TIMEOUT => 0,
-            CURLOPT_FOLLOWLOCATION => false,
-            CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
-            CURLOPT_CUSTOMREQUEST => "GET",
-        ));
+    } catch (Throwable $e) {
 
-        curl_exec($curl);
-        curl_error($curl);
-
-        $responseCode = curl_getinfo($curl)['http_code'];
-
-        if ($responseCode !== 200) {
-
-            $errorMsg = 'Request failed with error code: ' . $responseCode;
-
-        } else {
-
-            $success = true;
-
-        }
-
-        curl_close($curl);
-
-    } catch (Exception $e) {
-        // Record the error in WHMCS's module log.
         logModuleCall(
             'provisioningmodule',
             __FUNCTION__,
@@ -227,6 +189,7 @@ function hyperhost_TestConnection(array $params)
 
         $success  = false;
         $errorMsg = $e->getMessage();
+
     }
 
     return array(
@@ -251,44 +214,16 @@ function hyperhost_ServiceSingleSignOn(array $params)
 
     try {
 
-        $curl = curl_init();
+        $hyperClient = hyperhost_Client($params['serverpassword']);
+        $response    = $hyperClient->get('sso/' . hyper_host_id($params))->getBody()->getContents();
 
-        curl_setopt_array($curl, array(
-            CURLOPT_URL => "https://hyper.host/api/v1/sso/" . $params['clientsdetails']['customfields1'] . "?api_token=" . $params['serverpassword'],
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_ENCODING => "",
-            CURLOPT_MAXREDIRS => 10,
-            CURLOPT_TIMEOUT => 0,
-            CURLOPT_FOLLOWLOCATION => false,
-            CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
-            CURLOPT_CUSTOMREQUEST => "GET",
-        ));
+        return array(
+            'success' => true,
+            'redirectTo' => $response,
+        );
 
-        curl_exec($curl);
-        curl_error($curl);
+    } catch (Throwable $e) {
 
-        $response = curl_exec($curl);
-
-        $responseCode = curl_getinfo($curl)['http_code'];
-
-        if ($responseCode !== 200) {
-
-            return 'Request failed with error code: ' . $responseCode;
-
-        } else {
-
-            return array(
-                'success' => true,
-                'redirectTo' => $response,
-            );
-
-        }
-
-        curl_close($curl);
-
-    } catch (Exception $e) {
-
-        // Record the error in WHMCS's module log.
         logModuleCall(
             'provisioningmodule',
             __FUNCTION__,
@@ -314,45 +249,18 @@ function hyperhost_SuspendAccount(array $params)
 
     try {
 
-        $curl = curl_init();
-
-        $post = [
+        $payload = [
             'new_status' => 'disabled',
-            'hyper_host_id' => $params['clientsdetails']['customfields1'],
+            'hyper_host_id' => hyper_host_id($params),
         ];
 
-        curl_setopt_array($curl, array(
-            CURLOPT_URL => "https://hyper.host/api/v1/suser/status?api_token="  . $params['serverpassword'],
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_ENCODING => "",
-            CURLOPT_MAXREDIRS => 10,
-            CURLOPT_TIMEOUT => 0,
-            CURLOPT_FOLLOWLOCATION => false,
-            CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
-            CURLOPT_CUSTOMREQUEST => "POST",
-            CURLOPT_POSTFIELDS => $post,
-        ));
+        $hyperClient = hyperhost_Client($params['serverpassword']);
+        $hyperClient->post('suser/status', ['json' => $payload])->getBody()->getContents();
 
-        curl_exec($curl);
-        curl_error($curl);
+        return 'success';
 
-        $responseCode = curl_getinfo($curl)['http_code'];
+    } catch (Throwable $e) {
 
-        if ($responseCode !== 200) {
-
-            return 'Request failed with error code: ' . $responseCode;
-
-        } else {
-
-            return 'success';
-
-        }
-
-        curl_close($curl);
-
-    } catch (Exception $e) {
-
-        // Record the error in WHMCS's module log.
         logModuleCall(
             'provisioningmodule',
             __FUNCTION__,
@@ -368,51 +276,24 @@ function hyperhost_SuspendAccount(array $params)
 
 /**
  * Un-suspend a customer.
-*/
+ */
 function hyperhost_UnsuspendAccount(array $params)
 {
 
     try {
 
-        $curl = curl_init();
-
-        $post = [
+        $payload = [
             'new_status' => 'active',
-            'hyper_host_id' => $params['clientsdetails']['customfields1'],
+            'hyper_host_id' => hyper_host_id($params),
         ];
 
-        curl_setopt_array($curl, array(
-            CURLOPT_URL => "https://hyper.host/api/v1/suser/status?api_token="  . $params['serverpassword'],
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_ENCODING => "",
-            CURLOPT_MAXREDIRS => 10,
-            CURLOPT_TIMEOUT => 0,
-            CURLOPT_FOLLOWLOCATION => false,
-            CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
-            CURLOPT_CUSTOMREQUEST => "POST",
-            CURLOPT_POSTFIELDS => $post,
-        ));
+        $hyperClient = hyperhost_Client($params['serverpassword']);
+        $hyperClient->post('suser/status', ['json' => $payload])->getBody()->getContents();
 
-        curl_exec($curl);
-        curl_error($curl);
+        return 'success';
 
-        $responseCode = curl_getinfo($curl)['http_code'];
+    } catch (Throwable $e) {
 
-        if ($responseCode !== 200) {
-
-            return 'Request failed with error code: ' . $responseCode;
-
-        } else {
-
-            return 'success';
-
-        }
-
-        curl_close($curl);
-
-    } catch (Exception $e) {
-
-        // Record the error in WHMCS's module log.
         logModuleCall(
             'provisioningmodule',
             __FUNCTION__,
@@ -422,7 +303,23 @@ function hyperhost_UnsuspendAccount(array $params)
         );
 
         return $e->getMessage();
-
     }
+
+}
+
+function hyperhost_Client($apiToken)
+{
+
+    /**
+     * Setup a Guzzle Client just for this Auth request
+     */
+    return new Client([
+        'base_url' => ['https://hyper.host/api/v1/', ['version' => 'v1']],
+        'defaults' => [
+            'query' => [
+                'api_token' => $apiToken
+            ]
+        ]
+    ]);
 
 }
