@@ -3,7 +3,7 @@
 WHMCS Provisioning module to enable the following actions in WHMCS
 
 - Automatically create Customers during order process
-- Create hosting product (WordPress or Linux)
+- Create hosting product (WordPress, Linux or Windows)
 - Create hosting packages
 - Automate customer orders so hosting packages are created
 - Suspend packages
