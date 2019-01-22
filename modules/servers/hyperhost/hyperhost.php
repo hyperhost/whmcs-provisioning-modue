@@ -214,8 +214,10 @@ function hyperhost_ServiceSingleSignOn(array $params)
 
     try {
 
+        $hyperHostId = hyper_host_id($params);
+
         $hyperClient = hyperhost_Client($params['serverpassword']);
-        $response    = $hyperClient->get('sso/' . hyper_host_id($params))->getBody()->getContents();
+        $response    = $hyperClient->get('sso/' . $hyperHostId)->getBody()->getContents();
 
         return array(
             'success' => true,
@@ -249,9 +251,11 @@ function hyperhost_SuspendAccount(array $params)
 
     try {
 
+        $hyperHostId = hyper_host_id($params);
+
         $payload = [
             'new_status' => 'disabled',
-            'hyper_host_id' => hyper_host_id($params),
+            'hyper_host_id' => $hyperHostId,
         ];
 
         $hyperClient = hyperhost_Client($params['serverpassword']);
@@ -282,9 +286,11 @@ function hyperhost_UnsuspendAccount(array $params)
 
     try {
 
+        $hyperHostId = hyper_host_id($params);
+
         $payload = [
             'new_status' => 'active',
-            'hyper_host_id' => hyper_host_id($params),
+            'hyper_host_id' => $hyperHostId,
         ];
 
         $hyperClient = hyperhost_Client($params['serverpassword']);
