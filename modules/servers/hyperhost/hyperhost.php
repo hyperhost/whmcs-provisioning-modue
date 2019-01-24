@@ -1,7 +1,7 @@
 <?php
 
 /**
- * Hyper Host Provisioning Module v1.1
+ * Hyper Host Provisioning Module v1.1.2
  * Developed by Tony James - me@tony.codes
  */
 
@@ -71,7 +71,7 @@ function hyper_host_id(array $params)
     /**
      * If it cannot be found, return friendly error
      */
-    if (!$hyper_host_field->id || empty($hyper_host_field->id)) {
+    if (!$hyper_host_field->id) {
 
         return 'Failed to create hyper_host_id, have you added your custom client field?';
 
@@ -99,7 +99,7 @@ function hyper_host_id(array $params)
             ];
 
             $hyperClient = hyperhost_Client($params['serverpassword']);
-            $response    = $hyperClient->post('suser', ['json' => $payload])->getBody()->getContents();
+            $response    = $hyperClient->post('https://hyper.host/api/v1/suser', ['json' => $payload])->getBody()->getContents();
 
             Capsule::table('tblcustomfieldsvalues')
                 ->where('fieldid', $hyper_host_field->id)
@@ -145,7 +145,7 @@ function hyperhost_CreateAccount(array $params)
         ];
 
         $hyperClient = hyperhost_Client($params['serverpassword']);
-        $hyperClient->post('suser/' . $hyperHostId . '/package', ['json' => $payload])->getBody()->getContents();
+        $hyperClient->post('https://hyper.host/api/v1/suser/' . $hyperHostId . '/package', ['json' => $payload])->getBody()->getContents();
 
         return 'success';
 
@@ -174,7 +174,7 @@ function hyperhost_TestConnection(array $params)
     try {
 
         $hyperClient = hyperhost_Client($params['serverpassword']);
-        $hyperClient->get('package')->getBody()->getContents();
+        $hyperClient->get('https://hyper.host/api/v1/package')->json();
         $success = true;
 
     } catch (Throwable $e) {
@@ -188,7 +188,7 @@ function hyperhost_TestConnection(array $params)
         );
 
         $success  = false;
-        $errorMsg = $e->getMessage();
+        $errorMsg = 'Have you added your API key from https://hyper.host/settings ?';
 
     }
 
@@ -217,7 +217,7 @@ function hyperhost_ServiceSingleSignOn(array $params)
         $hyperHostId = hyper_host_id($params);
 
         $hyperClient = hyperhost_Client($params['serverpassword']);
-        $response    = $hyperClient->get('sso/' . $hyperHostId)->getBody()->getContents();
+        $response    = $hyperClient->get('https://hyper.host/api/v1/sso/' . $hyperHostId)->getBody()->getContents();
 
         return array(
             'success' => true,
@@ -259,7 +259,7 @@ function hyperhost_SuspendAccount(array $params)
         ];
 
         $hyperClient = hyperhost_Client($params['serverpassword']);
-        $hyperClient->post('suser/status', ['json' => $payload])->getBody()->getContents();
+        $hyperClient->post('https://hyper.host/api/v1/suser/status', ['json' => $payload])->getBody()->getContents();
 
         return 'success';
 
@@ -294,7 +294,7 @@ function hyperhost_UnsuspendAccount(array $params)
         ];
 
         $hyperClient = hyperhost_Client($params['serverpassword']);
-        $hyperClient->post('suser/status', ['json' => $payload])->getBody()->getContents();
+        $hyperClient->post('https://hyper.host/api/v1/suser/status', ['json' => $payload])->getBody()->getContents();
 
         return 'success';
 
@@ -320,7 +320,6 @@ function hyperhost_Client($apiToken)
      * Setup a Guzzle Client just for this Auth request
      */
     return new Client([
-        'base_url' => ['https://hyper.host/api/v1/', ['version' => 'v1']],
         'defaults' => [
             'query' => [
                 'api_token' => $apiToken
