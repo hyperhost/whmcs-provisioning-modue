@@ -40,12 +40,12 @@ function hyperhost_ConfigOptions()
             "FriendlyName" => "Platform",
             "Type" => "dropdown",
             "Options" => [
-                '905' => 'Linux',
+                '9739' => 'Linux',
                 '907' => 'WordPress',
                 '15809' => 'Windows',
             ],
             "Description" => "Select Linux if unsure, use WordPress only for WordPress sites",
-            "Default" => "905",
+            "Default" => "9739",
         ],
     ];
 
@@ -107,7 +107,7 @@ function hyper_host_id(array $params)
             ];
 
             $hyperClient = hyperhost_Client($params['serverpassword']);
-            $response    = $hyperClient->post('suser', ['json' => $payload])->getBody()->getContents();
+            $response    = $hyperClient->post('customers', ['json' => $payload])->getBody()->getContents();
 
             Capsule::table('tblcustomfieldsvalues')
                 ->where('fieldid', $hyper_host_field->id)
@@ -157,7 +157,7 @@ function hyperhost_CreateAccount(array $params)
         ];
 
         $hyperClient = hyperhost_Client($params['serverpassword']);
-        $hyperClient->post('suser/' . $hyperHostId . '/package', ['json' => $payload])->getBody()->getContents();
+        $hyperClient->post('packages', ['json' => $payload])->getBody()->getContents();
 
         return 'success';
 
@@ -191,7 +191,7 @@ function hyperhost_TestConnection(array $params)
     try {
 
         $hyperClient = hyperhost_Client($params['serverpassword']);
-        $hyperClient->get('package')->json();
+        $hyperClient->get('packages')->json();
         $success = true;
 
     } catch (Throwable $e) {
@@ -234,7 +234,7 @@ function hyperhost_ServiceSingleSignOn(array $params)
         $hyperHostId = hyper_host_id($params);
 
         $hyperClient = hyperhost_Client($params['serverpassword']);
-        $response    = $hyperClient->get('sso/' . $hyperHostId)->getBody()->getContents();
+        $response    = $hyperClient->get('customers/' . $hyperHostId . '/sso')->getBody()->getContents();
 
         return array(
             'success' => true,
@@ -275,12 +275,11 @@ function hyperhost_SuspendAccount(array $params)
         $hyperHostId = hyper_host_id($params);
 
         $payload = [
-            'new_status' => 'disabled',
-            'hyper_host_id' => $hyperHostId,
+            'status' => 'disabled',
         ];
 
         $hyperClient = hyperhost_Client($params['serverpassword']);
-        $hyperClient->post('suser/status', ['json' => $payload])->getBody()->getContents();
+        $hyperClient->put('customers/' . $hyperHostId, ['json' => $payload])->getBody()->getContents();
 
         return 'success';
 
@@ -314,12 +313,11 @@ function hyperhost_UnsuspendAccount(array $params)
         $hyperHostId = hyper_host_id($params);
 
         $payload = [
-            'new_status' => 'active',
-            'hyper_host_id' => $hyperHostId,
+            'status' => 'active',
         ];
 
         $hyperClient = hyperhost_Client($params['serverpassword']);
-        $hyperClient->post('suser/status', ['json' => $payload])->getBody()->getContents();
+        $hyperClient->put('customers/' . $hyperHostId, ['json' => $payload])->getBody()->getContents();
 
         return 'success';
 
