@@ -234,7 +234,7 @@ function hyperhost_ServiceSingleSignOn(array $params)
         $hyperHostId = hyper_host_id($params);
 
         $hyperClient = hyperhost_Client($params['serverpassword']);
-        $response    = $hyperClient->get('customers/' . $hyperHostId . '/sso')->getBody()->getContents();
+        $response    = $hyperClient->get('sub_users/' . $hyperHostId . '/sso')->getBody()->getContents();
 
         return array(
             'success' => true,
@@ -279,7 +279,7 @@ function hyperhost_SuspendAccount(array $params)
         ];
 
         $hyperClient = hyperhost_Client($params['serverpassword']);
-        $hyperClient->put('customers/' . $hyperHostId, ['json' => $payload])->getBody()->getContents();
+        $hyperClient->put('sub_users/' . $hyperHostId, ['json' => $payload])->getBody()->getContents();
 
         return 'success';
 
@@ -317,7 +317,7 @@ function hyperhost_UnsuspendAccount(array $params)
         ];
 
         $hyperClient = hyperhost_Client($params['serverpassword']);
-        $hyperClient->put('customers/' . $hyperHostId, ['json' => $payload])->getBody()->getContents();
+        $hyperClient->put('sub_users/' . $hyperHostId, ['json' => $payload])->getBody()->getContents();
 
         return 'success';
 
