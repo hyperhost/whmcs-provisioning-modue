@@ -349,10 +349,9 @@ function hyperhost_Client($apiToken)
      */
     return new Client([
         'base_url' => ['https://hyper.host/api/v1/', ['version' => 'v1']],
-        'defaults' => [
-            'query' => [
-                'api_token' => $apiToken
-            ]
+        'headers' => [
+            'Content-Type' => 'application/json',
+            'Authorization' => 'Bearer ' . $apiToken
         ]
     ]);
 
