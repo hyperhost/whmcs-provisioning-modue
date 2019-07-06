@@ -18,7 +18,7 @@ WHMCS Provisioning module to enable the following actions in WHMCS
 04. For the name put Hyper Host
 05. For the nameservers put ns1.hyper.host, ns2.hyper.host, ns3.hyper.host ns4.hyper.host
 06. For the type, select Hyper Host
-07. For the password, enter your API key generated at https://hyper.host/settings > Security/API Access
+07. For the password, enter your API key generated at https://hyper.host/account/api
 08. Save changes!
 
 ##### Note: All other fields can be left blank
