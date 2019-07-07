@@ -107,7 +107,7 @@ function hyper_host_id(array $params)
             ];
 
             $hyperClient = hyperhost_Client($params['serverpassword']);
-            $response    = $hyperClient->post('customers', ['json' => $payload])->getBody()->getContents();
+            $response    = $hyperClient->post('sub_users', ['json' => $payload])->getBody()->getContents();
 
             Capsule::table('tblcustomfieldsvalues')
                 ->where('fieldid', $hyper_host_field->id)
