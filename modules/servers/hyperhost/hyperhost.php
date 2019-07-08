@@ -92,9 +92,9 @@ function hyper_host_id(array $params)
 
         return $hyper_host_id;
 
-    /**
-     * If not set try and populate the value
-     */
+        /**
+         * If not set try and populate the value
+         */
     } else {
 
         try {
@@ -106,17 +106,46 @@ function hyper_host_id(array $params)
                 'status' => 'active', // Activate this user
             ];
 
-            $hyperClient = hyperhost_Client($params['serverpassword']);
-            $response    = $hyperClient->post('customers', ['json' => $payload])->getBody()->getContents();
+            $curl = curl_init();
 
-            Capsule::table('tblcustomfieldsvalues')
-                ->where('fieldid', $hyper_host_field->id)
-                ->where('relid', $params['clientsdetails']['userid'])
-                ->update([
-                    'value' => $response,
-                ]);
+            curl_setopt_array($curl, array(
+                CURLOPT_URL => "https://hyper.host/api/v1/sub_users",
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_ENCODING => "",
+                CURLOPT_MAXREDIRS => 10,
+                CURLOPT_TIMEOUT => 0,
+                CURLOPT_FOLLOWLOCATION => false,
+                CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
+                CURLOPT_CUSTOMREQUEST => "POST",
+                CURLOPT_POSTFIELDS => json_encode($payload),
+                CURLOPT_HTTPHEADER => array(
+                    "Content-Type: application/json",
+                    "Accept: application/json",
+                    "Authorization: Bearer " . $params['serverpassword']
+                ),
+            ));
 
-            return $response;
+            $response = curl_exec($curl);
+            $err      = curl_error($curl);
+
+            curl_close($curl);
+
+            if ($err) {
+
+                return $err;
+
+            } else {
+
+                Capsule::table('tblcustomfieldsvalues')
+                    ->where('fieldid', $hyper_host_field->id)
+                    ->where('relid', $params['clientsdetails']['userid'])
+                    ->update([
+                        'value' => $response->hyper_host_id,
+                    ]);
+
+                return $response;
+
+            }
 
         } catch (Throwable $e) {
 
@@ -156,10 +185,39 @@ function hyperhost_CreateAccount(array $params)
             'hyper_host_id' => $hyperHostId,
         ];
 
-        $hyperClient = hyperhost_Client($params['serverpassword']);
-        $hyperClient->post('packages', ['json' => $payload])->getBody()->getContents();
+        $curl = curl_init();
 
-        return 'success';
+        curl_setopt_array($curl, array(
+            CURLOPT_URL => "https://hyper.host/api/v1/packages",
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_ENCODING => "",
+            CURLOPT_MAXREDIRS => 10,
+            CURLOPT_TIMEOUT => 0,
+            CURLOPT_FOLLOWLOCATION => false,
+            CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
+            CURLOPT_CUSTOMREQUEST => "POST",
+            CURLOPT_POSTFIELDS => json_encode($payload),
+            CURLOPT_HTTPHEADER => array(
+                "Content-Type: application/json",
+                "Accept: application/json",
+                "Authorization: Bearer " . $params['serverpassword']
+            ),
+        ));
+
+        $response = curl_exec($curl);
+        $err      = curl_error($curl);
+
+        curl_close($curl);
+
+        if ($err) {
+
+            return $err;
+
+        } else {
+
+            return 'success';
+
+        }
 
     } catch (Throwable $e) {
 
@@ -190,9 +248,33 @@ function hyperhost_TestConnection(array $params)
 
     try {
 
-        $hyperClient = hyperhost_Client($params['serverpassword']);
-        $hyperClient->get('packages')->json();
-        $success = true;
+        $curl = curl_init();
+
+        curl_setopt_array($curl, array(
+            CURLOPT_URL => "https://hyper.host/api/v1/packages",
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_ENCODING => "",
+            CURLOPT_MAXREDIRS => 10,
+            CURLOPT_TIMEOUT => 0,
+            CURLOPT_FOLLOWLOCATION => false,
+            CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
+            CURLOPT_CUSTOMREQUEST => "GET",
+            CURLOPT_HTTPHEADER => array(
+                "Content-Type: application/json",
+                "Authorization: Bearer " . $params['serverpassword']
+            ),
+        ));
+
+        $response = curl_exec($curl);
+        $err      = curl_error($curl);
+
+        curl_close($curl);
+
+        if ($err) {
+            $errorMsg = $err;
+        } else {
+            $success = true;
+        }
 
     } catch (Throwable $e) {
 
@@ -223,8 +305,8 @@ function hyperhost_TestConnection(array $params)
  *
  * @param array $params common module parameters
  *
- * @see https://developers.whmcs.com/provisioning-modules/module-parameters/
  * @return array
+ * @see https://developers.whmcs.com/provisioning-modules/module-parameters/
  */
 function hyperhost_ServiceSingleSignOn(array $params)
 {
@@ -233,13 +315,55 @@ function hyperhost_ServiceSingleSignOn(array $params)
 
         $hyperHostId = hyper_host_id($params);
 
-        $hyperClient = hyperhost_Client($params['serverpassword']);
-        $response    = $hyperClient->get('sub_users/' . $hyperHostId . '/sso')->getBody()->getContents();
+        $curl = curl_init();
 
-        return array(
-            'success' => true,
-            'redirectTo' => $response,
-        );
+        curl_setopt_array($curl, array(
+            CURLOPT_URL => "https://hyper.host/api/v1/whmcs/sso",
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_ENCODING => "",
+            CURLOPT_MAXREDIRS => 10,
+            CURLOPT_TIMEOUT => 0,
+            CURLOPT_FOLLOWLOCATION => false,
+            CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
+            CURLOPT_CUSTOMREQUEST => "POST",
+            CURLOPT_POSTFIELDS => json_encode(['identifier' => $params['domain']]),
+            CURLOPT_HTTPHEADER => array(
+                "Content-Type: application/json",
+                "Authorization: Bearer " . $params['serverpassword']
+            ),
+        ));
+
+        $response = curl_exec($curl);
+
+        $err  = curl_error($curl);
+        $info = curl_getinfo($curl);
+
+        curl_close($curl);
+
+        if ($err) {
+
+            return array(
+                'success' => false,
+                'errorMsg' => $err,
+            );
+
+        } else {
+
+            if ($info['http_code'] !== 200) {
+
+                return array(
+                    'success' => false,
+                    'errorMsg' => $response,
+                );
+
+            }
+
+            return array(
+                'success' => true,
+                'redirectTo' => $response,
+            );
+
+        }
 
     } catch (Throwable $e) {
 
